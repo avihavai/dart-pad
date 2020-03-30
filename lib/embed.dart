@@ -413,19 +413,36 @@ class Embed {
         return;
       }
 
-      var type = data['type'];
 
-      if (type == 'sourceCode') {
-        lastInjectedSourceCode =
-            Map<String, String>.from(data['sourceCode'] as Map);
-        _resetCode();
-
-        if (autoRunEnabled) {
+      switch (data['type']) {
+        case 'execute':
           _handleExecute();
-        }
-      }
-      if (type == 'getCode') {
-        window.parent.postMessage(context.dartSource, '*');
+          break;
+        case 'sourceCode':
+          lastInjectedSourceCode =
+          Map<String, String>.from(data['sourceCode'] as Map);
+          _resetCode();
+
+          if (autoRunEnabled) {
+            _handleExecute();
+          }
+          break;
+        case 'getAllContent':
+          window.parent.postMessage({
+            'code': context.dartSource,
+            'html': context.htmlSource,
+            'css': context.cssSource
+          }, '*');
+          break;
+        case 'getCode':
+          window.parent.postMessage(context.dartSource, '*');
+          break;
+        case 'getHtml':
+          window.parent.postMessage(context.htmlSource, '*');
+          break;
+        case 'getCss':
+          window.parent.postMessage(context.cssSource, '*');
+          break;
       }
     });
   }
