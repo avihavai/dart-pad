@@ -7,7 +7,6 @@ import 'dart:html' hide Document, Console;
 import 'dart:math' as math;
 
 import 'package:dart_pad/elements/material_tab_controller.dart';
-import 'package:dart_pad/src/ga.dart';
 import 'package:split/split.dart';
 import 'package:mdc_web/mdc_web.dart';
 
@@ -229,7 +228,6 @@ class Embed {
           tabController.selectTab('solution', force: true);
         });
         hintBox.showElements([hintElement, showSolutionButton]);
-        ga?.sendEvent('view', 'hint');
       })
       ..element.hidden = true;
 
@@ -361,8 +359,6 @@ class Embed {
         result.messages,
         result.success ? FlashBoxStyle.success : FlashBoxStyle.warn,
       );
-      ga?.sendEvent(
-          'execution', (result.success) ? 'test-success' : 'test-failure');
     });
 
     analysisResultsController = AnalysisResultsController(
@@ -524,7 +520,6 @@ class Embed {
 
   void _init() {
     deps[GistLoader] = GistLoader.defaultFilters();
-    deps[Analytics] = Analytics();
 
     context = EmbedContext(
         userCodeEditor, testEditor, solutionEditor, htmlEditor, cssEditor);
@@ -735,9 +730,6 @@ class Embed {
     context.htmlSource = sources['index.html'] ?? '';
     context.cssSource = sources['styles.css'] ?? '';
     context.hint = sources['hint.txt'] ?? '';
-    if (sources.containsKey('ga_id')) {
-      _sendVirtualPageView(sources['ga_id']);
-    }
     tabController.setTabVisibility(
         'test', context.testMethod.isNotEmpty && _showTestCode);
     menuButton.toggleAttr('hidden', context.testMethod.isEmpty);
@@ -760,7 +752,6 @@ class Embed {
     }
 
     _executionButtonCount++;
-    ga?.sendEvent('execution', 'initiated', label: '$_executionButtonCount');
 
     editorIsBusy = true;
     testResultBox.hide();
@@ -782,12 +773,10 @@ class Embed {
           response.result,
           modulesBaseUrl: response.modulesBaseUrl,
         );
-        ga?.sendEvent('execution', 'ddc-compile-success');
       }).catchError((e, st) {
         consoleExpandController.showOutput('Error compiling to JavaScript:\n$e',
             error: true);
         print(st);
-        ga?.sendEvent('execution', 'ddc-compile-failure');
       }).whenComplete(() {
         webOutputLabel.setAttr('hidden');
         editorIsBusy = false;
@@ -797,14 +786,12 @@ class Embed {
           .compile(input)
           .timeout(longServiceCallTimeout)
           .then((CompileResponse response) {
-        ga?.sendEvent('execution', 'html-compile-success');
         return executionSvc.execute(
             context.htmlSource, context.cssSource, response.result);
       }).catchError((e, st) {
         consoleExpandController.showOutput('Error compiling to JavaScript:\n$e',
             error: true);
         print(st);
-        ga?.sendEvent('execution', 'html-compile-failure');
       }).whenComplete(() {
         webOutputLabel.setAttr('hidden');
         editorIsBusy = false;
@@ -815,12 +802,10 @@ class Embed {
           .timeout(longServiceCallTimeout)
           .then((CompileResponse response) {
         executionSvc.execute('', '', response.result);
-        ga?.sendEvent('execution', 'compile-success');
       }).catchError((e, st) {
         consoleExpandController.showOutput('Error compiling to JavaScript:\n$e',
             error: true);
         print(st);
-        ga?.sendEvent('execution', 'compile-failure');
       }).whenComplete(() {
         editorIsBusy = false;
       });
@@ -830,10 +815,8 @@ class Embed {
   void _sendVirtualPageView(String id) {
     var url = Uri.parse(window.location.toString());
     var newParams = Map<String, String>.from(url.queryParameters);
-    newParams['ga_id'] = id;
     var pageName = url.replace(queryParameters: newParams);
     var path = '${pageName.path}?${pageName.query}';
-    ga?.sendPage(pageName: path);
   }
 
   void _displayIssues(List<AnalysisIssue> issues) {
@@ -1001,7 +984,6 @@ class EmbedTabController extends MaterialTabController {
     }
 
     if (tabName == 'solution') {
-      ga?.sendEvent('view', 'solution');
       _userHasSeenSolution = true;
     }
 
