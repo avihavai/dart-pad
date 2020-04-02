@@ -60,7 +60,7 @@ void init(EmbedOptions options) {
   _embed = Embed(options);
 }
 
-enum EmbedMode { dart, flutter, html, inline }
+enum EmbedMode { dart, flutter, html, inline, input }
 
 class EmbedOptions {
   final EmbedMode mode;
@@ -550,6 +550,7 @@ class Embed {
     var horizontal = true;
     var webOutput = querySelector('#web-output');
     List<Element> splitterElements;
+
     if (options.mode == EmbedMode.flutter || options.mode == EmbedMode.html) {
       var editorAndConsoleContainer =
           querySelector('#editor-and-console-container');
@@ -738,6 +739,69 @@ class Embed {
     editorIsBusy = false;
   }
 
+  String expandDartSourceToHandleInput() {
+    const inputHandlerImports = "import 'dart:html'; import 'dart:js';";
+    const inputSimulationCode = '''
+Future sleep(s) {
+  var duration = Duration(seconds: s);
+  return new Future.delayed(duration, () => s);
+}
+var stdin = Input();
+
+class Input {
+    var inputText = "";
+    var promptDiv = new DivElement()
+      ..id='prompt';
+    var promptText = new SpanElement()
+      ..text='Saisinko tekstiä tähän kiitos: ';
+    var promptInput = new TextInputElement()
+      ..id='prompt-input';
+  
+    void handleInput(event) {
+      if (event.keyCode == KeyCode.ENTER) {
+        inputText = promptInput.value;
+        promptDiv.remove();
+      }
+    }
+  
+  Future<String> readLineSync() async {
+    addInputElement();
+    var i = 1;
+    while (true) {
+      if (querySelector('#prompt-input') == null) break;
+      await sleep(1);
+      i++;
+    }
+    return inputText;
+  }
+  
+  void addInputElement() {
+    document.body.append(promptDiv);
+    promptDiv.append(promptText);
+    promptDiv.append(promptInput);
+    promptInput.onKeyPress.listen(handleInput);
+  }
+}
+''';
+
+
+    // Add required inputs for input simulation
+    var dartSource = inputHandlerImports + context.dartSource;
+
+    // make main asynchronous
+    dartSource = dartSource.replaceAllMapped(
+        RegExp(r'^\s*(main\s*\(\)\s*){', multiLine: true), (match)
+                {return '${match.group(1)} async {';});
+
+    // add await for stdin calls
+    dartSource = dartSource.replaceAllMapped(
+        RegExp(r'=\s*(stdin\.)', multiLine: true), (match)
+                {return '= await ${match.group(1)}';});
+
+    // Add input simulation code to dart source
+    return dartSource + inputSimulationCode;
+  }
+
   void _handleExecute() {
     if (editorIsBusy) {
       return;
@@ -758,8 +822,15 @@ class Embed {
     hintBox.hide();
     consoleExpandController.clear();
 
-    final fullCode = '${context.dartSource}\n${context.testMethod}\n'
+    var dartSource = context.dartSource;
+    const checker = '^\\s*import\\s*["\']dart:io["\']\\s*;';
+    if (dartSource.contains(RegExp(checker))) {
+      dartSource = expandDartSourceToHandleInput();
+    }
+
+    final fullCode = '${dartSource}\n${context.testMethod}\n'
         '${executionSvc.testResultDecoration}';
+
 
     var input = CompileRequest()..source = fullCode;
     if (options.mode == EmbedMode.flutter) {
