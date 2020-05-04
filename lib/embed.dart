@@ -837,8 +837,15 @@ class SpoofInput {
     final fullCode = '${dartSource}\n${context.testMethod}\n'
         '${executionSvc.testResultDecoration}';
 
+    void _handleError(e, st) {
+      const compileErrorMessage = 'Error: could not compile code';
+      final errorMessage = e.toString() == "Instance of 'minified:h_'" ? compileErrorMessage : '$compileErrorMessage\n$e';
+      consoleExpandController.showOutput(errorMessage, error: true);
+      print(st);
+    }
 
     var input = CompileRequest()..source = fullCode;
+
     if (options.mode == EmbedMode.flutter) {
       dartServices
           .compileDDC(input)
@@ -850,11 +857,9 @@ class SpoofInput {
           response.result,
           modulesBaseUrl: response.modulesBaseUrl,
         );
-      }).catchError((e, st) {
-        consoleExpandController.showOutput('Error compiling to JavaScript:\n$e',
-            error: true);
-        print(st);
-      }).whenComplete(() {
+      }).catchError(
+        _handleError
+      ).whenComplete(() {
         webOutputLabel.setAttr('hidden');
         editorIsBusy = false;
       });
@@ -865,11 +870,9 @@ class SpoofInput {
           .then((CompileResponse response) {
         return executionSvc.execute(
             context.htmlSource, context.cssSource, response.result);
-      }).catchError((e, st) {
-        consoleExpandController.showOutput('Error compiling to JavaScript:\n$e',
-            error: true);
-        print(st);
-      }).whenComplete(() {
+      }).catchError(
+        _handleError
+      ).whenComplete(() {
         webOutputLabel.setAttr('hidden');
         editorIsBusy = false;
       });
@@ -879,11 +882,9 @@ class SpoofInput {
           .timeout(longServiceCallTimeout)
           .then((CompileResponse response) {
         executionSvc.execute('', '', response.result);
-      }).catchError((e, st) {
-        consoleExpandController.showOutput('Error compiling to JavaScript:\n$e',
-            error: true);
-        print(st);
-      }).whenComplete(() {
+      }).catchError(
+        _handleError
+      ).whenComplete(() {
         editorIsBusy = false;
       });
     }
