@@ -747,29 +747,30 @@ class Embed {
   String expandDartSourceToHandleInput() {
     const inputHandlerImports = "import 'dart:html'; import 'dart:js';";
     const inputSimulationCode = '''
-Future sleep(s) {
-  var duration = Duration(seconds: s);
-  return new Future.delayed(duration, () => s);
-}
-var stdin = Input();
+var stdin = SpoofInput();
 
-class Input {
-    var inputText = "";
-    var promptDiv = new DivElement()
-      ..id='prompt';
-    var promptText = new SpanElement()
-      ..text='Saisinko tekstiä tähän kiitos: ';
-    var promptInput = new TextInputElement()
-      ..id='prompt-input';
-  
-    void handleInput(event) {
-      if (event.keyCode == KeyCode.ENTER) {
-        inputText = promptInput.value;
-        promptDiv.remove();
-      }
+class SpoofInput {
+  var inputText = "";
+  final promptDiv = new DivElement()
+    ..id='prompt';
+  final promptText = new SpanElement()
+    ..text='Saisinko tekstiä tähän kiitos: ';
+  final promptInput = new TextInputElement()
+    ..id='prompt-input';
+
+  handleInput(event) {
+    if (event.keyCode == KeyCode.ENTER) {
+      inputText = promptInput.value;
+      promptDiv.remove();
     }
+  }
+
+  sleep(s) {
+    final duration = Duration(seconds: s);
+    return new Future.delayed(duration, () => s);
+  }
   
-  Future<String> readLineSync() async {
+  readLineSync() async {
     addInputElement();
     var i = 1;
     while (true) {
@@ -780,7 +781,7 @@ class Input {
     return inputText;
   }
   
-  void addInputElement() {
+  addInputElement() {
     document.body.append(promptDiv);
     promptDiv.append(promptText);
     promptDiv.append(promptInput);
@@ -795,13 +796,13 @@ class Input {
 
     // make main asynchronous
     dartSource = dartSource.replaceAllMapped(
-        RegExp(r'^\s*(main\s*\(\)\s*){', multiLine: true), (match)
+        RegExp(r'\b(main\s*\(.*\)\s*){', multiLine: true), (match)
                 {return '${match.group(1)} async {';});
 
     // add await for stdin calls
     dartSource = dartSource.replaceAllMapped(
-        RegExp(r'=\s*(stdin\.)', multiLine: true), (match)
-                {return '= await ${match.group(1)}';});
+        RegExp(r'\b(stdin\.)', multiLine: true), (match)
+                {return 'await ${match.group(1)}';});
 
     // Add input simulation code to dart source
     return dartSource + inputSimulationCode;
