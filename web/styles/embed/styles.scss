@@ -168,8 +168,15 @@ body {
 
 #console-output-container {
   margin: 8px;
+  font-family: $editor-font;
+  font-size: $embed-editor-font-size;
+  white-space: pre-wrap;
+}
+
+.console-spoof-input-container {
+  display: flex;
   flex: 1;
-  overflow: auto;
+  min-height: 72px;
   font-family: $editor-font;
   font-size: $embed-editor-font-size;
   white-space: pre-wrap;

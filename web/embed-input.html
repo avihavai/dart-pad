@@ -138,15 +138,17 @@ BSD-style license that can be found in the LICENSE file. -->
             <button id="open-in-dartpad" title="Full screen" class="mdc-icon-button material-icons">launch</button>
         </div>
     </div>
-    <div id="console-view" hidden>
+    <div id="console-view" hidden class="custom-scrollbar">
         <div id="console-output-header">
             <span class="view-label">Console <span id="unread-console-counter" class="Counter" hidden></span></span>
         </div>
-        <div id="console-output-container" class="custom-scrollbar"></div>
-    </div>
-    <div id="web-output">
-        <iframe id="frame" sandbox="allow-scripts" class="flex-auto">
-        </iframe>
+        <div id="console-output-container" class="custom-scrollbar">
+
+        </div>
+        <div id="web-output" class="console-spoof-input-container">
+            <iframe id="frame" sandbox="allow-scripts" class="flex-auto">
+            </iframe>
+        </div>
     </div>
 </section>
 <footer flex layout horizontal class="footer">

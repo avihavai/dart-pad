@@ -745,18 +745,21 @@ class Embed {
   }
 
   String expandDartSourceToHandleInput() {
-    const inputHandlerImports = "import 'dart:html'; import 'dart:js';";
+    const inputHandlerImports = "import 'dart:html';";
     const inputSimulationCode = '''
-var stdin = SpoofInput();
+var stdin = SpoofInput() as dynamic;
 
 class SpoofInput {
   var inputText = "";
-  final promptDiv = new DivElement()
+  var promptDiv = new DivElement()
     ..id='prompt';
-  final promptText = new SpanElement()
-    ..text='Saisinko tekstiä tähän kiitos: ';
   final promptInput = new TextInputElement()
+    ..placeholder='Kirjoita tekstiä tähän'
     ..id='prompt-input';
+
+  @override
+  noSuchMethod(invocation) =>
+  print('stdin.\${invocation.memberName.toString().replaceAll('Symbol("', '').replaceAll('")', '')} ei ole käytettävissä dartpadissa');
 
   handleInput(event) {
     if (event.keyCode == KeyCode.ENTER) {
@@ -780,12 +783,15 @@ class SpoofInput {
     }
     return inputText;
   }
-  
+
   addInputElement() {
+    promptDiv.style.padding = '8px';
+    promptInput.style.width = '98%';
+
     document.body.append(promptDiv);
-    promptDiv.append(promptText);
     promptDiv.append(promptInput);
     promptInput.onKeyPress.listen(handleInput);
+    promptInput.select();
   }
 }
 ''';
