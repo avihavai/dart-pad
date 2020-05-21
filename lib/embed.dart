@@ -30,6 +30,7 @@ import 'elements/console.dart';
 import 'elements/counter.dart';
 import 'elements/dialog.dart';
 import 'util/keymap.dart';
+import 'spoofInput.dart';
 
 const int defaultSplitterWidth = 6;
 
@@ -744,76 +745,6 @@ class Embed {
     editorIsBusy = false;
   }
 
-  String expandDartSourceToHandleInput() {
-    const inputHandlerImports = "import 'dart:html';";
-    const inputSimulationCode = '''
-var stdin = SpoofInput() as dynamic;
-
-class SpoofInput {
-  var inputText = "";
-  var promptDiv = new DivElement()
-    ..id='prompt';
-  final promptInput = new TextInputElement()
-    ..placeholder='Kirjoita tekstiä tähän'
-    ..id='prompt-input';
-
-  @override
-  noSuchMethod(invocation) =>
-  print('stdin.\${invocation.memberName.toString().replaceAll('Symbol("', '').replaceAll('")', '')} ei ole käytettävissä dartpadissa');
-
-  handleInput(event) {
-    if (event.keyCode == KeyCode.ENTER) {
-      inputText = promptInput.value;
-      promptDiv.remove();
-    }
-  }
-
-  sleep(s) {
-    final duration = Duration(seconds: s);
-    return new Future.delayed(duration, () => s);
-  }
-  
-  readLineSync() async {
-    addInputElement();
-    var i = 1;
-    while (true) {
-      if (querySelector('#prompt-input') == null) break;
-      await sleep(1);
-      i++;
-    }
-    return inputText;
-  }
-
-  addInputElement() {
-    promptDiv.style.padding = '8px';
-    promptInput.style.width = '98%';
-
-    document.body.append(promptDiv);
-    promptDiv.append(promptInput);
-    promptInput.onKeyPress.listen(handleInput);
-    promptInput.select();
-  }
-}
-''';
-
-
-    // Add required inputs for input simulation
-    var dartSource = inputHandlerImports + context.dartSource;
-
-    // make main asynchronous
-    dartSource = dartSource.replaceAllMapped(
-        RegExp(r'\b(main\s*\(.*\)\s*){', multiLine: true), (match)
-                {return '${match.group(1)} async {';});
-
-    // add await for stdin calls
-    dartSource = dartSource.replaceAllMapped(
-        RegExp(r'\b(stdin\.)', multiLine: true), (match)
-                {return 'await ${match.group(1)}';});
-
-    // Add input simulation code to dart source
-    return dartSource + inputSimulationCode;
-  }
-
   void _handleExecute() {
     if (editorIsBusy) {
       return;
@@ -835,9 +766,9 @@ class SpoofInput {
     consoleExpandController.clear();
 
     var dartSource = context.dartSource;
-    const checker = '^\\s*import\\s*["\']dart:io["\']\\s*;';
+    const checker = '\\bimport\\s*["\']dart:io["\']\\s*';
     if (dartSource.contains(RegExp(checker))) {
-      dartSource = expandDartSourceToHandleInput();
+      dartSource = expandDartSourceToHandleInput(context.dartSource);
     }
 
     final fullCode = '${dartSource}\n${context.testMethod}\n'
